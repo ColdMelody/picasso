@@ -23,14 +23,15 @@ import java.io.InputStream;
  * An input stream wrapper that supports unlimited independent cursors for
  * marking and resetting. Each cursor is a token, and it's the caller's
  * responsibility to keep track of these.
+ * 实现了mark()和reset()方法的流
  */
 final class MarkableInputStream extends InputStream {
   private static final int DEFAULT_BUFFER_SIZE = 4096;
   private static final int DEFAULT_LIMIT_INCREMENT = 1024;
   private final InputStream in;
-
+  //标记位置
   private long offset;
-  private long reset;
+  private long reset;/*当前位置*/
   private long limit;
   private long defaultMark = -1;
   private boolean allowExpire = true;
@@ -46,6 +47,10 @@ final class MarkableInputStream extends InputStream {
 
   private MarkableInputStream(InputStream in, int size, int limitIncrement) {
     if (!in.markSupported()) {
+      //BufferedInputStream是支持mark方法的
+      //对于BufferedInputStream，readlimit表示：
+      // InputStream调用mark方法的时刻起，在读取readlimit个字节之前，标记的该位置是有效的。
+      // 如果读取的字节数大于readlimit，可能标记的位置会失效。
       in = new BufferedInputStream(in, size);
     }
     this.in = in;
@@ -62,6 +67,8 @@ final class MarkableInputStream extends InputStream {
    * Call {@link #reset(long)} to return to this position in the stream later.
    * It is an error to call {@link #reset(long)} after consuming more than
    * {@code readLimit} bytes from this stream.
+   * <p>返回一个代表当前流位置的一个不透明的标记。可以调用reset(long)方法来返回在流中标记的位置。
+   * <p>当在这个流中消费的字节超过了readlimit的限制时，调用reset方法会出现错误。
    */
   public long savePosition(int readLimit) {
     long offsetLimit = offset + readLimit;
@@ -84,6 +91,7 @@ final class MarkableInputStream extends InputStream {
    */
   private void setLimit(long limit) {
     try {
+      //默认reset和offset都为0
       if (reset < offset && offset <= this.limit) {
         in.reset();
         in.mark((int) (limit - reset));

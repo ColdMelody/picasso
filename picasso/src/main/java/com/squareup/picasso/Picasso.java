@@ -101,7 +101,7 @@ public class Picasso {
 
   /**
    * The priority of a request.
-   *
+   * //优点之一，可以设置请求的优先级
    * @see RequestCreator#priority(Priority)
    */
   public enum Priority {
@@ -247,7 +247,7 @@ public class Picasso {
     if (tag == null) {
       throw new IllegalArgumentException("Cannot cancel requests with null tag.");
     }
-
+    //内部是数组的数据结构
     List<Action> actions = new ArrayList<Action>(targetToAction.values());
     //noinspection ForLoopReplaceableByForEach
     for (int i = 0, n = actions.size(); i < n; i++) {
@@ -504,7 +504,7 @@ public class Picasso {
     }
     targetToDeferredRequestCreator.put(view, request);
   }
-
+  //取消存在的action，并重新将action放入队列中
   void enqueueAndSubmit(Action action) {
     Object target = action.getTarget();
     if (target != null && targetToAction.get(target) != action) {
@@ -528,27 +528,28 @@ public class Picasso {
     }
     return cached;
   }
-
+//mark 20160721 read
   void complete(BitmapHunter hunter) {
     Action single = hunter.getAction();
     List<Action> joined = hunter.getActions();
-
+    //是否由多个action
     boolean hasMultiple = joined != null && !joined.isEmpty();
+    //是否交付
     boolean shouldDeliver = single != null || hasMultiple;
 
     if (!shouldDeliver) {
       return;
     }
-
+    //request的uri，指向image
     Uri uri = hunter.getData().uri;
     Exception exception = hunter.getException();
     Bitmap result = hunter.getResult();
     LoadedFrom from = hunter.getLoadedFrom();
-
+    //单个action直接交付
     if (single != null) {
       deliverAction(result, from, single);
     }
-
+    //多个action的情况
     if (hasMultiple) {
       //noinspection ForLoopReplaceableByForEach
       for (int i = 0, n = joined.size(); i < n; i++) {
@@ -556,7 +557,7 @@ public class Picasso {
         deliverAction(result, from, join);
       }
     }
-
+    //获取image过程中出现异常
     if (listener != null && exception != null) {
       listener.onImageLoadFailed(this, uri, exception);
     }
@@ -594,6 +595,7 @@ public class Picasso {
       if (from == null) {
         throw new AssertionError("LoadedFrom cannot be null.");
       }
+      //排除不正常情况，然后提交
       action.complete(result, from);
       if (loggingEnabled) {
         log(OWNER_MAIN, VERB_COMPLETED, action.request.logId(), "from " + from);
@@ -607,12 +609,16 @@ public class Picasso {
   }
 
   private void cancelExistingRequest(Object target) {
+    //检测是否在主线程，false抛出异常
     checkMain();
+    //根据target获得当前action
     Action action = targetToAction.remove(target);
     if (action != null) {
       action.cancel();
+      //分发器分发下去
       dispatcher.dispatchCancel(action);
     }
+    //mark一下
     if (target instanceof ImageView) {
       ImageView targetImageView = (ImageView) target;
       DeferredRequestCreator deferredRequestCreator =

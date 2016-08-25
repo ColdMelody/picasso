@@ -120,9 +120,12 @@ class BitmapHunter implements Runnable {
    * {@code inSampleSize}).
    */
   static Bitmap decodeStream(InputStream stream, Request request) throws IOException {
+    //包装的BufferedInputStream
     MarkableInputStream markStream = new MarkableInputStream(stream);
     stream = markStream;
+    //允许mark
     markStream.allowMarksToExpire(false);
+    //设定好mark
     long mark = markStream.savePosition(1024);
 
     final BitmapFactory.Options options = RequestHandler.createBitmapOptions(request);
@@ -134,15 +137,17 @@ class BitmapHunter implements Runnable {
     // We decode from a byte array because, a) when decoding a WebP network stream, BitmapFactory
     // throws a JNI Exception, so we workaround by decoding a byte array, or b) user requested
     // purgeable, which only affects bitmaps decoded from byte arrays.
+    // 网络流或者可清除的request，使用byte数组读取流，然后解析byte数组
     if (isWebPFile || isPurgeable) {
       byte[] bytes = Utils.toByteArray(stream);
       if (calculateSize) {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+        //计算缩略倍数，inJustDecodeBounds设为false
         RequestHandler.calculateInSampleSize(request.targetWidth, request.targetHeight, options,
             request);
       }
       return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
-    } else {
+    } else {/* 否则直接解析流*/
       if (calculateSize) {
         BitmapFactory.decodeStream(stream, null, options);
         RequestHandler.calculateInSampleSize(request.targetWidth, request.targetHeight, options,
@@ -166,12 +171,14 @@ class BitmapHunter implements Runnable {
       if (picasso.loggingEnabled) {
         log(OWNER_HUNTER, VERB_EXECUTING, getLogIdsForHunter(this));
       }
-
+      //获取bitmap
       result = hunt();
 
       if (result == null) {
+        //bitmap为空，发送失败消息
         dispatcher.dispatchFailed(this);
       } else {
+        //反之，发送成功消息
         dispatcher.dispatchComplete(this);
       }
     } catch (Downloader.ResponseException e) {
@@ -202,6 +209,7 @@ class BitmapHunter implements Runnable {
     Bitmap bitmap = null;
 
     if (shouldReadFromMemoryCache(memoryPolicy)) {
+      //内存中存在bitmap，直接根据key获取
       bitmap = cache.get(key);
       if (bitmap != null) {
         stats.dispatchCacheHit();
@@ -212,11 +220,14 @@ class BitmapHunter implements Runnable {
         return bitmap;
       }
     }
-
+    //根据重试次数判断从什么地方获取bitmap，默认是硬盘
     data.networkPolicy = retryCount == 0 ? NetworkPolicy.OFFLINE.index : networkPolicy;
+    //从本地缓存中获取bitmap
     RequestHandler.Result result = requestHandler.load(data, networkPolicy);
     if (result != null) {
+      //从哪获取bitmap
       loadedFrom = result.getLoadedFrom();
+      //bitmap的处理信息
       exifOrientation = result.getExifOrientation();
       bitmap = result.getBitmap();
 
@@ -238,7 +249,9 @@ class BitmapHunter implements Runnable {
       stats.dispatchBitmapDecoded(bitmap);
       if (data.needsTransformation() || exifOrientation != 0) {
         synchronized (DECODE_LOCK) {
+          //
           if (data.needsMatrixTransform() || exifOrientation != 0) {
+            //对bitmap做处理
             bitmap = transformResult(data, bitmap, exifOrientation);
             if (picasso.loggingEnabled) {
               log(OWNER_HUNTER, VERB_TRANSFORMED, data.logId());
@@ -259,7 +272,7 @@ class BitmapHunter implements Runnable {
 
     return bitmap;
   }
-
+  //在分发器的performSubmit方法中调用，用来合并相同的请求
   void attach(Action action) {
     boolean loggingEnabled = picasso.loggingEnabled;
     Request request = action.request;
@@ -277,6 +290,7 @@ class BitmapHunter implements Runnable {
     }
 
     if (actions == null) {
+      // 最多可以有三个
       actions = new ArrayList<Action>(3);
     }
 
@@ -311,7 +325,7 @@ class BitmapHunter implements Runnable {
       log(OWNER_HUNTER, VERB_REMOVED, action.request.logId(), getLogIdsForHunter(this, "from "));
     }
   }
-
+  //优先级
   private Priority computeNewPriority() {
     Priority newPriority = LOW;
 
@@ -492,7 +506,7 @@ class BitmapHunter implements Runnable {
     }
     return result;
   }
-
+  //对Bitmap做深层处理，旋转，剪切，缩放，变换等
   static Bitmap transformResult(Request data, Bitmap result, int exifOrientation) {
     int inWidth = result.getWidth();
     int inHeight = result.getHeight();

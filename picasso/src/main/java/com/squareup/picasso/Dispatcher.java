@@ -186,19 +186,22 @@ class Dispatcher {
     }
 
     BitmapHunter hunter = hunterMap.get(action.getKey());
+    //存在hunter，表示前面有同样的请求在进行，因此可以合并请求
     if (hunter != null) {
       hunter.attach(action);
       return;
     }
-
+    //线程池关闭
     if (service.isShutdown()) {
       if (action.getPicasso().loggingEnabled) {
         log(OWNER_DISPATCHER, VERB_IGNORED, action.request.logId(), "because shut down");
       }
       return;
     }
-
+    //在这执行的获取bitmap
     hunter = forRequest(action.getPicasso(), this, cache, stats, action);
+    // 这个地方的service使用的是ExecutorService接口，所以如果自己没有定义线程池的话，使用默认的PicassoExecutorService，
+    // 这个线程池内部实现了一个优先级的比较类
     hunter.future = service.submit(hunter);
     hunterMap.put(action.getKey(), hunter);
     if (dismissFailed) {
@@ -448,7 +451,9 @@ class Dispatcher {
       return;
     }
     batch.add(hunter);
+    //检查下Message的队列中有没有这个消息
     if (!handler.hasMessages(HUNTER_DELAY_NEXT_BATCH)) {
+      //每200毫秒发送一次消息，实现批处理
       handler.sendEmptyMessageDelayed(HUNTER_DELAY_NEXT_BATCH, BATCH_DELAY);
     }
   }

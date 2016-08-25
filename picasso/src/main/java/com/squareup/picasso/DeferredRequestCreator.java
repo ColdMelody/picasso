@@ -26,6 +26,9 @@ import java.lang.ref.WeakReference;
 import static android.os.Build.VERSION.SDK_INT;
 import static android.os.Build.VERSION_CODES.HONEYCOMB_MR1;
 
+/**
+ * 推迟执行的request创建器？mark
+ */
 class DeferredRequestCreator implements ViewTreeObserver.OnPreDrawListener {
 
   final RequestCreator creator;

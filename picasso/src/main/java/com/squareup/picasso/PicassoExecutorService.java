@@ -95,6 +95,9 @@ class PicassoExecutorService extends ThreadPoolExecutor {
     return ftask;
   }
 
+  /**
+   * 这个是用来计算优先级的类
+   */
   private static final class PicassoFutureTask extends FutureTask<BitmapHunter>
       implements Comparable<PicassoFutureTask> {
     private final BitmapHunter hunter;

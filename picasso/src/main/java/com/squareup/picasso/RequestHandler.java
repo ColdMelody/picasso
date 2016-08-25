@@ -152,7 +152,11 @@ public abstract class RequestHandler {
   }
 
   static boolean requiresInSampleSize(BitmapFactory.Options options) {
-    return options != null && options.inJustDecodeBounds;
+    return options != null &&
+            options.inJustDecodeBounds/*If set to true, the decoder will return null (no bitmap), but
+                                        the out... fields will still be set, allowing the caller to query
+                                        the bitmap without having to allocate the memory for its pixels.
+                                        也就是说，如果设为true，不返回一个真正的bitmap，因此避免了内存的分配。但我们可以获取它的宽高*/;
   }
 
   static void calculateInSampleSize(int reqWidth, int reqHeight, BitmapFactory.Options options,

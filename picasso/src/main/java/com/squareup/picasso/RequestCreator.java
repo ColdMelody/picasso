@@ -104,6 +104,7 @@ public class RequestCreator {
   }
 
   /**
+   * 加载时的图片
    * A placeholder drawable to be used while the image is being loaded. If the requested image is
    * not immediately available in the memory cache then this resource will be set on the target
    * {@link ImageView}.
@@ -247,7 +248,7 @@ public class RequestCreator {
   }
 
   /**
-   * Centers an image inside of the bounds specified by {@link #resize(int, int)}. This scales
+   * Centers an image inside of the bounds specified by {@link #resize(int, int)}. This sca les
    * the image so that both dimensions are equal to or less than the requested bounds.
    */
   public RequestCreator centerInside() {
@@ -670,17 +671,20 @@ public class RequestCreator {
     if (target == null) {
       throw new IllegalArgumentException("Target must not be null.");
     }
-
+    //uri为空且资源id为空
     if (!data.hasImage()) {
+      //断开请求
       picasso.cancelRequest(target);
       if (setPlaceholder) {
+        //有预设图片
         setPlaceholder(target, getPlaceholderDrawable());
       }
       return;
     }
 
-    if (deferred) {
-      if (data.hasSize()) {
+    if (deferred) {/*时候设定了fit()方法，这个方法支持延迟加载*/
+      if (data.hasSize()) {/*request预设了targetWidth和targetHeight用以resize()*/
+        //resize()和fit()无法同时使用
         throw new IllegalStateException("Fit cannot be used with resize.");
       }
       int width = target.getWidth();
@@ -692,35 +696,39 @@ public class RequestCreator {
         picasso.defer(target, new DeferredRequestCreator(this, target, callback));
         return;
       }
+      //设定尺寸
       data.resize(width, height);
     }
 
     Request request = createRequest(started);
     String requestKey = createKey(request);
-
+    //可以在缓存中获取图片
     if (shouldReadFromMemoryCache(memoryPolicy)) {
       Bitmap bitmap = picasso.quickMemoryCacheCheck(requestKey);
       if (bitmap != null) {
+        //缓存中有，就不必再网络请求了
         picasso.cancelRequest(target);
+        //给ImageView设定bitmap
         setBitmap(target, picasso.context, bitmap, MEMORY, noFade, picasso.indicatorsEnabled);
         if (picasso.loggingEnabled) {
           log(OWNER_MAIN, VERB_COMPLETED, request.plainId(), "from " + MEMORY);
         }
+        //有回调的话
         if (callback != null) {
           callback.onSuccess();
         }
         return;
       }
     }
-
+    //缓存中没有，只能网络请求，先设定好占位符
     if (setPlaceholder) {
       setPlaceholder(target, getPlaceholderDrawable());
     }
-
+    //建立action
     Action action =
         new ImageViewAction(picasso, target, request, memoryPolicy, networkPolicy, errorResId,
             errorDrawable, requestKey, tag, callback, noFade);
-
+    //将action提交到队列
     picasso.enqueueAndSubmit(action);
   }
 
