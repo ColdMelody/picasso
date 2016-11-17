@@ -705,6 +705,7 @@ public class RequestCreatorTest {
     }
   }
 
+  @SuppressWarnings("ResourceType")
   @Test public void invalidPlaceholderImage() {
     try {
       new RequestCreator().placeholder(0);

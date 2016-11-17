@@ -164,7 +164,7 @@ public abstract class RequestHandler {
     calculateInSampleSize(reqWidth, reqHeight, options.outWidth, options.outHeight, options,
         request);
   }
-
+  // 在流中获取之后进行处理
   static void calculateInSampleSize(int reqWidth, int reqHeight, int width, int height,
       BitmapFactory.Options options, Request request) {
     int sampleSize = 1;
